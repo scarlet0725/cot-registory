@@ -1,0 +1,28 @@
+{
+  "name": "cot",
+  "version": "0.1.0",
+  "description": "An OCI-conformant container registry with a lightweight dashboard, built on Cloudflare Workers, R2, and D1.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:migrate:local": "wrangler d1 migrations apply cot-registry --local",
+    "db:migrate": "wrangler d1 migrations apply cot-registry --remote",
+    "cf-typegen": "wrangler types"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.9.14",
+    "@cloudflare/workers-types": "^4.20251011.0",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4",
+    "wrangler": "~4.44.0"
+  },
+  "dependencies": {
+    "hono": "^4.13.12"
+  }
+}

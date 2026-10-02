@@ -1,0 +1,38 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cot",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-09-01",
+  "observability": {
+    "enabled": true
+  },
+  "r2_buckets": [
+    {
+      "binding": "BUCKET",
+      "bucket_name": "cot-registry"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "cot-registry",
+      // Replace with the ID printed by `wrangler d1 create cot-registry`.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    // Set to "true" to allow unauthenticated pulls (GET/HEAD) and public dashboard.
+    "PUBLIC_READ": "false",
+    // Display name shown in the dashboard header.
+    "REGISTRY_NAME": "cot"
+  },
+  "triggers": {
+    // Garbage collection: abandoned upload sessions and unreferenced blobs.
+    "crons": ["17 3 * * *"]
+  }
+  // Credentials are secrets, never vars:
+  //   wrangler secret put REGISTRY_USERNAME
+  //   wrangler secret put REGISTRY_PASSWORD
+  // When neither is set, the registry runs in OPEN mode (local dev only).
+}
