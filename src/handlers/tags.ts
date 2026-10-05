@@ -9,10 +9,13 @@
  *
  * GET /v2/_catalog?n=<int>&last=<repo>
  *   - Same pagination over repository names: {"repositories": [...]}.
+ *   - Anonymous requests only see public repositories; authenticated
+ *     principals (admin or issued token) see everything.
  */
 
 import type { Env } from "../types";
 import { DEFAULT_PAGE_SIZE } from "../types";
+import type { Principal } from "../auth";
 import { ociError } from "../oci/errors";
 
 interface Pagination {
@@ -81,19 +84,28 @@ export async function handleTagsList(env: Env, repo: string, url: URL): Promise<
   return new Response(JSON.stringify({ name: repo, tags }), { status: 200, headers });
 }
 
-export async function handleCatalog(env: Env, url: URL): Promise<Response> {
+export async function handleCatalog(
+  env: Env,
+  url: URL,
+  principal: Principal,
+): Promise<Response> {
   const page = parsePagination(url);
   if (page instanceof Response) return page;
 
   let repositories: string[] = [];
   let truncated = false;
   if (page.limit > 0) {
-    const stmt =
-      page.last !== null
-        ? env.DB.prepare("SELECT name FROM repositories WHERE name > ? ORDER BY name LIMIT ?")
-            .bind(page.last, page.limit + 1)
-        : env.DB.prepare("SELECT name FROM repositories ORDER BY name LIMIT ?")
-            .bind(page.limit + 1);
+    const where: string[] = [];
+    const binds: unknown[] = [];
+    if (principal.kind === "anonymous") where.push("visibility = 'public'");
+    if (page.last !== null) {
+      where.push("name > ?");
+      binds.push(page.last);
+    }
+    const clause = where.length > 0 ? ` WHERE ${where.join(" AND ")}` : "";
+    const stmt = env.DB
+      .prepare(`SELECT name FROM repositories${clause} ORDER BY name LIMIT ?`)
+      .bind(...binds, page.limit + 1);
     ({ values: repositories, truncated } = await fetchPage(stmt, page.limit, "name"));
   }
 

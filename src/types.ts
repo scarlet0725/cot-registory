@@ -8,12 +8,14 @@ export interface Env {
   /** D1 database holding registry metadata (see migrations/). */
   DB: D1Database;
 
-  /** Secret. When both USERNAME and PASSWORD are set, Basic auth is enforced. */
-  REGISTRY_USERNAME?: string;
+  /**
+   * Secret. Admin credentials for the /admin dashboard (token issuance,
+   * repository visibility). When both are unset the registry runs in OPEN
+   * mode (everything allowed; local dev only).
+   */
+  ADMIN_USERNAME?: string;
   /** Secret. */
-  REGISTRY_PASSWORD?: string;
-  /** "true" => unauthenticated GET/HEAD (pull) and public dashboard. */
-  PUBLIC_READ?: string;
+  ADMIN_PASSWORD?: string;
   /** Display name for the dashboard header. */
   REGISTRY_NAME?: string;
 }

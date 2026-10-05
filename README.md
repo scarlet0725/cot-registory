@@ -22,8 +22,12 @@ pull from anywhere, browse in the dashboard.
 - **Lightweight dashboard**: repository list with sizes, tag browser,
   manifest/layer inspector, referrer artifacts, multi-arch index navigation.
   Server-rendered, zero external assets, dark/light via `prefers-color-scheme`.
-- **Basic auth** with constant-time comparison, optional public (anonymous)
-  pulls via `PUBLIC_READ`.
+- **Token-based auth**: issue and revoke access tokens in the `/admin`
+  dashboard (stored as SHA-256 hashes, constant-time comparison); clients use
+  plain `docker login`.
+- **Per-repository visibility**: each repository is **private** (token
+  required even to pull) or **public** (anonymous pulls, catalog and
+  dashboard visibility) — toggled in `/admin`.
 - **Garbage collection** on a cron trigger: abandoned upload sessions,
   unreferenced blobs and manifests.
 - **Tiny footprint** — [Hono](https://hono.dev/) is the only runtime
@@ -40,9 +44,9 @@ docker / podman / oras / crane            browser
 └──────┬──────────────────────────────┬─────────────────────────┘
        ▼                              ▼
    R2 bucket                       D1 database
-   blobs/<digest>      content     repositories, tags,
-   manifests/<digest>  (bytes)     manifests, repo_blobs,
-   staging/<uuid>                  uploads   (metadata)
+   blobs/<digest>      content     repositories (visibility), tags,
+   manifests/<digest>  (bytes)     manifests, repo_blobs, uploads,
+   staging/<uuid>                  credentials (token hashes)
        ▲
        └── cron trigger: GC (stale uploads, orphaned content)
 ```
@@ -69,23 +73,41 @@ npx wrangler d1 create cot-registry
 # 2. Apply the schema
 npm run db:migrate
 
-# 3. Credentials (skip both to run an OPEN registry — dev only!)
-npx wrangler secret put REGISTRY_USERNAME
-npx wrangler secret put REGISTRY_PASSWORD
+# 3. Admin credentials (skip both to run an OPEN registry — dev only!)
+npx wrangler secret put ADMIN_USERNAME
+npx wrangler secret put ADMIN_PASSWORD
 
 # 4. Ship it
 npm run deploy
 ```
 
-Then use it like any registry:
+Open `https://cot.<your-subdomain>.workers.dev/admin`, sign in with the admin
+credentials, and **issue an access token** — the token ID is the username,
+the secret (shown once) is the password. Then use it like any registry:
 
 ```sh
-docker login cot.<your-subdomain>.workers.dev
+docker login cot.<your-subdomain>.workers.dev   # token ID / secret
 docker tag alpine cot.<your-subdomain>.workers.dev/infra/alpine:3.20
 docker push cot.<your-subdomain>.workers.dev/infra/alpine:3.20
 ```
 
 Open `https://cot.<your-subdomain>.workers.dev/` for the dashboard.
+
+## Authentication & visibility
+
+- **Admin credentials** (`ADMIN_USERNAME`/`ADMIN_PASSWORD` secrets) guard the
+  `/admin` dashboard, where access tokens are issued/revoked and repository
+  visibility is toggled. They also have full registry access.
+- **Access tokens** are what clients (`docker login`, CI) authenticate with.
+  Secrets are stored only as SHA-256 hashes; revocation is immediate.
+- **Repositories are private by default**: pulling, `tags/list`, the catalog
+  entry, and the dashboard pages all require a token. Making a repository
+  **public** allows anonymous pulls and dashboard viewing. Pushes always
+  require a token.
+- Anonymous requests for missing repositories answer `401` (not `404`), so
+  private repository names never leak.
+- With **both admin secrets unset** the registry runs in OPEN mode —
+  everything (including `/admin`) is unauthenticated. Local dev only.
 
 > **Note**: Docker requires HTTPS for non-localhost registries — Workers
 > domains have that out of the box. A custom domain works too (add a
@@ -107,10 +129,13 @@ treats `localhost` as an insecure registry by default).
 
 | Name | Kind | Default | Description |
 | --- | --- | --- | --- |
-| `REGISTRY_USERNAME` | secret | *(unset)* | Basic auth user. Unset **both** secrets ⇒ open registry (dev only). Setting only one fails closed. |
-| `REGISTRY_PASSWORD` | secret | *(unset)* | Basic auth password. |
-| `PUBLIC_READ` | var | `"false"` | `"true"` ⇒ anonymous pulls (GET/HEAD) and public dashboard; pushes still need auth. |
+| `ADMIN_USERNAME` | secret | *(unset)* | Admin user for `/admin` (token issuance, visibility). Unset **both** secrets ⇒ open registry (dev only). Setting only one fails closed. |
+| `ADMIN_PASSWORD` | secret | *(unset)* | Admin password. |
 | `REGISTRY_NAME` | var | `"cot"` | Display name in the dashboard. |
+
+Registry clients never use the admin secrets — they authenticate with access
+tokens issued at `/admin`. Per-repository visibility (public/private) lives in
+D1 and is managed there too.
 
 ## Limits & caveats
 

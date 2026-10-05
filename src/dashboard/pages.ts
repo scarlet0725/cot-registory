@@ -76,6 +76,7 @@ export function errorResponse(
 interface RepoListRow {
   name: string;
   created_at: number;
+  visibility: string;
   tag_count: number;
   manifest_count: number;
   storage_size: number | null;
@@ -83,9 +84,24 @@ interface RepoListRow {
   last_manifest_at: number | null;
 }
 
-export async function renderHomePage(env: Env, url: URL): Promise<string> {
+/** Visibility pill for repo tables. */
+export function visibilityBadge(visibility: string): string {
+  const cls = visibility === "public" ? "public" : "private";
+  return `<span class="vis ${cls}">${escapeHtml(visibility)}</span>`;
+}
+
+/**
+ * Home page. `showAll` lists every repository with its visibility
+ * (authenticated viewers); otherwise only public repositories appear.
+ */
+export async function renderHomePage(
+  env: Env,
+  url: URL,
+  showAll: boolean,
+): Promise<string> {
+  const where = showAll ? "" : "WHERE r.visibility = 'public'";
   const { results } = await env.DB.prepare(
-    `SELECT r.name, r.created_at,
+    `SELECT r.name, r.created_at, r.visibility,
        (SELECT COUNT(*) FROM tags t WHERE t.repo = r.name) AS tag_count,
        (SELECT COUNT(*) FROM manifests m WHERE m.repo = r.name) AS manifest_count,
        (SELECT SUM(b.size) FROM repo_blobs rb JOIN blobs b ON b.digest = rb.digest
@@ -93,6 +109,7 @@ export async function renderHomePage(env: Env, url: URL): Promise<string> {
        (SELECT MAX(t.updated_at) FROM tags t WHERE t.repo = r.name) AS last_tag_at,
        (SELECT MAX(m.created_at) FROM manifests m WHERE m.repo = r.name) AS last_manifest_at
      FROM repositories r
+     ${where}
      ORDER BY r.name
      LIMIT ?`,
   )
@@ -100,7 +117,14 @@ export async function renderHomePage(env: Env, url: URL): Promise<string> {
     .all<RepoListRow>();
 
   let content: string;
-  if (results.length === 0) {
+  if (results.length === 0 && !showAll) {
+    content = `<h1>Repositories</h1>
+<p class="subtitle">No public repositories.</p>
+<div class="card empty">
+<h2>Nothing public here</h2>
+<p>Private repositories require signing in with an access token.</p>
+</div>`;
+  } else if (results.length === 0) {
     const host = url.host;
     content = `<h1>Repositories</h1>
 <p class="subtitle">This registry is empty.</p>
@@ -111,13 +135,15 @@ ${command(`docker tag my-image ${host}/my-image:latest`)}
 ${command(`docker push ${host}/my-image:latest`)}
 </div>`;
   } else {
+    const visHead = showAll ? `<th>Visibility</th>` : "";
     const rows = results
       .map((r) => {
         const last =
           Math.max(r.last_tag_at ?? 0, r.last_manifest_at ?? 0) || r.created_at;
+        const visCell = showAll ? `<td>${visibilityBadge(r.visibility)}</td>` : "";
         return `<tr>
 <td><a href="${escapeHtml(repoUrl(r.name))}">${escapeHtml(r.name)}</a></td>
-<td class="num">${r.tag_count}</td>
+${visCell}<td class="num">${r.tag_count}</td>
 <td class="num">${r.manifest_count}</td>
 <td class="num">${sizeCell(r.storage_size ?? 0)}</td>
 <td class="nowrap muted">${escapeHtml(formatTime(last))}</td>
@@ -131,7 +157,7 @@ ${command(`docker push ${host}/my-image:latest`)}
     content = `<h1>Repositories</h1>
 <p class="subtitle">${results.length} repositor${results.length === 1 ? "y" : "ies"}</p>
 <div class="table-wrap"><table>
-<thead><tr><th>Repository</th><th class="num">Tags</th><th class="num">Manifests</th><th class="num">Size</th><th>Last activity</th></tr></thead>
+<thead><tr><th>Repository</th>${visHead}<th class="num">Tags</th><th class="num">Manifests</th><th class="num">Size</th><th>Last activity</th></tr></thead>
 <tbody>
 ${rows}
 </tbody>

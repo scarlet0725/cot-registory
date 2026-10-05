@@ -15,6 +15,8 @@
  */
 
 import type { Env } from "../types";
+import type { Principal } from "../auth";
+import { BASIC_CHALLENGE, anonymousCanRead } from "../auth";
 import { isValidRepoName, parseDigest } from "../oci/validation";
 import { pageResponse } from "./html";
 import {
@@ -54,10 +56,34 @@ function notFound(env: Env, method: string, url: URL): Response {
   );
 }
 
+/**
+ * Anonymous viewers may only open public repositories. Private AND missing
+ * repos both answer 401 (with the Basic challenge, so browsers prompt),
+ * keeping private repository names unguessable.
+ */
+async function repoViewDenied(
+  env: Env,
+  method: string,
+  principal: Principal,
+  repo: string,
+): Promise<Response | null> {
+  if (principal.kind !== "anonymous") return null;
+  if (await anonymousCanRead(env, repo)) return null;
+  return errorResponse(
+    env,
+    method,
+    401,
+    "Authentication required",
+    "This repository is private. Sign in with an access token to view it.",
+    { "WWW-Authenticate": BASIC_CHALLENGE },
+  );
+}
+
 export async function handleDashboard(
   request: Request,
   env: Env,
   url: URL,
+  principal: Principal,
 ): Promise<Response> {
   const method = request.method;
 
@@ -77,7 +103,7 @@ export async function handleDashboard(
 
   // GET /
   if (segments.length === 0) {
-    return pageResponse(method, await renderHomePage(env, url));
+    return pageResponse(method, await renderHomePage(env, url, principal.kind !== "anonymous"));
   }
 
   // GET /favicon.svg
@@ -99,6 +125,8 @@ export async function handleDashboard(
       if (!isValidRepoName(repo) || parseDigest(digest) === null) {
         return notFound(env, method, url);
       }
+      const denied = await repoViewDenied(env, method, principal, repo);
+      if (denied) return denied;
       const page = await renderManifestPage(env, url, repo, digest);
       if (page === null) {
         return errorResponse(
@@ -115,6 +143,8 @@ export async function handleDashboard(
     // GET /r/<name>
     const repo = segments.slice(1).join("/");
     if (!isValidRepoName(repo)) return notFound(env, method, url);
+    const denied = await repoViewDenied(env, method, principal, repo);
+    if (denied) return denied;
     const page = await renderRepoPage(env, url, repo);
     if (page === null) {
       return errorResponse(

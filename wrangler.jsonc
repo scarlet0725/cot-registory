@@ -22,8 +22,6 @@
     }
   ],
   "vars": {
-    // Set to "true" to allow unauthenticated pulls (GET/HEAD) and public dashboard.
-    "PUBLIC_READ": "false",
     // Display name shown in the dashboard header.
     "REGISTRY_NAME": "cot"
   },
@@ -31,8 +29,10 @@
     // Garbage collection: abandoned upload sessions and unreferenced blobs.
     "crons": ["17 3 * * *"]
   }
-  // Credentials are secrets, never vars:
-  //   wrangler secret put REGISTRY_USERNAME
-  //   wrangler secret put REGISTRY_PASSWORD
+  // Admin credentials (for the /admin dashboard) are secrets, never vars:
+  //   wrangler secret put ADMIN_USERNAME
+  //   wrangler secret put ADMIN_PASSWORD
   // When neither is set, the registry runs in OPEN mode (local dev only).
+  // Registry clients authenticate with access tokens issued at /admin;
+  // per-repository visibility (public/private) is managed there too.
 }

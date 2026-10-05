@@ -86,6 +86,8 @@ const STYLE = `
   --hairline: #e7ebf0;
   --accent: #0b63ce;
   --code-bg: #eef1f5;
+  --danger: #b42318;
+  --ok: #1a7f37;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -97,6 +99,8 @@ const STYLE = `
     --hairline: #242b33;
     --accent: #4493f8;
     --code-bg: #1d232b;
+    --danger: #f85149;
+    --ok: #3fb950;
   }
 }
 html { -webkit-text-size-adjust: 100%; }
@@ -173,6 +177,33 @@ button.copy:hover { color: var(--text); border-color: var(--muted); }
 .empty p { color: var(--muted); margin: 0 0 12px; }
 .note { color: var(--muted); font-size: 13px; }
 
+.topbar-inner .spacer { flex: 1 1 auto; }
+.topbar-inner .nav { color: var(--muted); font-size: 13px; }
+.topbar-inner .nav:hover { color: var(--text); text-decoration: none; }
+
+form.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 0; }
+form.inline { display: inline; margin: 0; }
+input[type="text"] {
+  font: inherit; font-size: 13.5px; color: var(--text); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; min-width: 220px;
+}
+input[type="text"]:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.btn {
+  font: 13px/1.2 system-ui, sans-serif; color: var(--text);
+  background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+  padding: 6px 12px; cursor: pointer;
+}
+.btn:hover { border-color: var(--muted); }
+.btn.danger { color: var(--danger); }
+.btn.danger:hover { border-color: var(--danger); }
+
+.vis {
+  padding: 2px 8px; border: 1px solid var(--border); border-radius: 999px;
+  font-size: 11px; white-space: nowrap;
+}
+.vis.public { color: var(--ok); border-color: var(--ok); }
+.vis.private { color: var(--muted); }
+
 details { margin: 22px 0 0; }
 details summary { cursor: pointer; font-weight: 600; font-size: 14px; }
 details pre {
@@ -233,6 +264,8 @@ export function renderLayout(registryName: string, page: Page): string {
 <header class="topbar"><div class="topbar-inner">
 <a class="brand" href="/">${name}</a>
 <span class="badge">OCI registry</span>
+<span class="spacer"></span>
+<a class="nav" href="/admin">admin</a>
 </div></header>
 <main>
 ${crumbs}${page.content}
@@ -249,7 +282,8 @@ const CSP = [
   "script-src 'unsafe-inline'",
   "img-src 'self' data:",
   "base-uri 'none'",
-  "form-action 'none'",
+  // The admin pages submit POST forms to this origin.
+  "form-action 'self'",
 ].join("; ");
 
 /** Wrap a rendered document in a Response; HEAD requests get no body. */
