@@ -280,10 +280,9 @@ describe("blob delete", () => {
   it("deleting from one repo keeps the mounted copy readable", async () => {
     const data = randomBytes(128);
     const digest = await pushBlob("del/keep-src", data);
-    await SELF.fetch(
-      `${BASE}/v2/del/keep-dst/blobs/uploads/?mount=${encodeURIComponent(digest)}`,
-      { method: "POST" },
-    );
+    await SELF.fetch(`${BASE}/v2/del/keep-dst/blobs/uploads/?mount=${encodeURIComponent(digest)}`, {
+      method: "POST",
+    });
     await SELF.fetch(`${BASE}/v2/del/keep-src/blobs/${digest}`, { method: "DELETE" });
     const get = await SELF.fetch(`${BASE}/v2/del/keep-dst/blobs/${digest}`);
     expect(get.status).toBe(200);

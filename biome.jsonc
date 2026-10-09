@@ -1,0 +1,39 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    // package-lock.json stays npm-formatted; everything else at the top level is ours.
+    "includes": ["src/**", "test/**", "*.ts", "*.json", "*.jsonc", "!package-lock.json"]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "complexity": {
+        // Unknown JSON is read with bracket access on purpose (Record<string, unknown>).
+        "useLiteralKeys": "off"
+      },
+      "style": {
+        // With noUncheckedIndexedAccess, `!` after a successful regex match is deliberate.
+        "noNonNullAssertion": "off"
+      }
+    }
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "off"
+      }
+    }
+  }
+}

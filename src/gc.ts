@@ -63,8 +63,7 @@ export async function runGC(env: Env): Promise<GCResult> {
 
   // 1. Stale upload sessions: abort the multipart upload if one was started,
   //    best-effort delete the staged object, drop the row.
-  const stale = await env.DB
-    .prepare("SELECT * FROM uploads WHERE updated_at < ?")
+  const stale = await env.DB.prepare("SELECT * FROM uploads WHERE updated_at < ?")
     .bind(now - UPLOAD_SESSION_TTL_MS)
     .all<UploadRow>();
   const uploadRowDeletes: D1PreparedStatement[] = [];
@@ -88,9 +87,10 @@ export async function runGC(env: Env): Promise<GCResult> {
 
   // 2. Orphan staged objects: staging keys with no uploads row (crash leftovers),
   //    old enough that no in-flight session can still own them.
-  const liveUploads = await env.DB
-    .prepare("SELECT id, r2_key FROM uploads")
-    .all<{ id: string; r2_key: string }>();
+  const liveUploads = await env.DB.prepare("SELECT id, r2_key FROM uploads").all<{
+    id: string;
+    r2_key: string;
+  }>();
   const expectedStagingKeys = new Set(liveUploads.results.map((r) => r.r2_key));
   const staleStaging = (await listStaleKeys(env, STAGING_PREFIX, UPLOAD_SESSION_TTL_MS)).filter(
     (key) => !expectedStagingKeys.has(key),
@@ -99,11 +99,10 @@ export async function runGC(env: Env): Promise<GCResult> {
   uploadsDeleted += staleStaging.length;
 
   // 3. Orphan blobs: no repo links and past the grace window for in-flight pushes.
-  const orphanBlobs = await env.DB
-    .prepare(
-      "SELECT b.digest FROM blobs b LEFT JOIN repo_blobs rb ON rb.digest = b.digest " +
-        "WHERE rb.digest IS NULL AND b.created_at < ?",
-    )
+  const orphanBlobs = await env.DB.prepare(
+    "SELECT b.digest FROM blobs b LEFT JOIN repo_blobs rb ON rb.digest = b.digest " +
+      "WHERE rb.digest IS NULL AND b.created_at < ?",
+  )
     .bind(now - ORPHAN_BLOB_GRACE_MS)
     .all<{ digest: string }>();
   const orphanDigests = orphanBlobs.results.map((r) => r.digest);
@@ -118,9 +117,7 @@ export async function runGC(env: Env): Promise<GCResult> {
   //     leaves the object for this pass, and a crash between the R2 put and
   //     the D1 commit leaks one). A fresh push re-puts the object, refreshing
   //     `uploaded`, so the grace window makes this safe against in-flight work.
-  const knownBlobRows = await env.DB
-    .prepare("SELECT digest FROM blobs")
-    .all<{ digest: string }>();
+  const knownBlobRows = await env.DB.prepare("SELECT digest FROM blobs").all<{ digest: string }>();
   const knownBlobs = new Set(knownBlobRows.results.map((r) => r.digest));
   const orphanBlobKeys = (await listStaleKeys(env, BLOB_PREFIX, ORPHAN_BLOB_GRACE_MS)).filter(
     (key) => !knownBlobs.has(key.slice(BLOB_PREFIX.length)),
@@ -130,9 +127,9 @@ export async function runGC(env: Env): Promise<GCResult> {
 
   // 4. Orphan manifest objects: R2 content no manifests row references any more
   //    (manifest content is shared across repos, so check the digest globally).
-  const knownRows = await env.DB
-    .prepare("SELECT DISTINCT digest FROM manifests")
-    .all<{ digest: string }>();
+  const knownRows = await env.DB.prepare("SELECT DISTINCT digest FROM manifests").all<{
+    digest: string;
+  }>();
   const knownManifests = new Set(knownRows.results.map((r) => r.digest));
   const orphanManifestKeys = (
     await listStaleKeys(env, MANIFEST_PREFIX, ORPHAN_BLOB_GRACE_MS)

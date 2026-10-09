@@ -97,10 +97,7 @@ interface CredentialAuthRow {
  * Resolve the request's principal, or a 401 Response when credentials were
  * presented but are malformed or invalid.
  */
-export async function authenticate(
-  request: Request,
-  env: Env,
-): Promise<Principal | Response> {
+export async function authenticate(request: Request, env: Env): Promise<Principal | Response> {
   const adminUser = env.ADMIN_USERNAME;
   const adminPass = env.ADMIN_PASSWORD;
 
@@ -119,8 +116,7 @@ export async function authenticate(
   // Evaluate the admin comparison AND the token lookup unconditionally, so
   // timing does not reveal which usernames exist.
   const [row, providedHash] = await Promise.all([
-    env.DB
-      .prepare("SELECT id, secret_hash, last_used_at FROM credentials WHERE id = ?")
+    env.DB.prepare("SELECT id, secret_hash, last_used_at FROM credentials WHERE id = ?")
       .bind(creds.user)
       .first<CredentialAuthRow>(),
     sha256Hex(creds.pass),
@@ -136,22 +132,24 @@ export async function authenticate(
   if (row && tokenOk) {
     const now = Date.now();
     if (row.last_used_at === null || now - row.last_used_at > LAST_USED_GRANULARITY_MS) {
-      await env.DB
-        .prepare("UPDATE credentials SET last_used_at = ? WHERE id = ?")
+      await env.DB.prepare("UPDATE credentials SET last_used_at = ? WHERE id = ?")
         .bind(now, row.id)
         .run();
     }
     return { kind: "credential", id: row.id };
   }
 
+  // Visible in Workers Logs so brute-force attempts can be spotted and the
+  // targeted token revoked. Never log the presented secret or username — a
+  // password pasted into the username field must not end up in logs.
+  console.warn(row ? `auth: bad secret for token ${row.id}` : "auth: invalid credentials");
   return unauthorized();
 }
 
 /** May anonymous clients read `repo`? (Missing repos read as not-public, so
  * their existence never leaks to anonymous clients.) */
 export async function anonymousCanRead(env: Env, repo: string): Promise<boolean> {
-  const row = await env.DB
-    .prepare("SELECT visibility FROM repositories WHERE name = ?")
+  const row = await env.DB.prepare("SELECT visibility FROM repositories WHERE name = ?")
     .bind(repo)
     .first<{ visibility: string }>();
   return row?.visibility === "public";

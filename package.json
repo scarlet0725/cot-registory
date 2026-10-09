@@ -5,22 +5,29 @@
   "private": true,
   "type": "module",
   "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p test/tsconfig.json",
+    "lint": "biome check .",
+    "lint:fix": "biome check . --write",
     "test": "vitest run",
     "test:watch": "vitest",
+    "check": "npm run typecheck && npm run lint && npm test",
     "db:migrate:local": "wrangler d1 migrations apply cot-registry --local",
     "db:migrate": "wrangler d1 migrations apply cot-registry --remote",
     "cf-typegen": "wrangler types"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "^0.9.14",
-    "@cloudflare/workers-types": "^4.20251011.0",
+    "@biomejs/biome": "2.5.15",
+    "@cloudflare/vitest-plugin": "^1.4.0",
+    "@cloudflare/workers-types": "^5.20261009.1",
     "typescript": "^5.9.2",
-    "vitest": "^3.2.4",
-    "wrangler": "~4.44.0"
+    "vitest": "^4.1.11",
+    "wrangler": "^4.149.0"
   },
   "dependencies": {
     "hono": "^4.13.12"

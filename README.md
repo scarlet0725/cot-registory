@@ -62,7 +62,7 @@ Prerequisites: a Cloudflare account with Workers, R2, and D1 enabled, and
 `npm`/`node` locally.
 
 ```sh
-git clone https://github.com/scarlet0725/cot && cd cot
+git clone https://github.com/scarlet0725/cot-registory && cd cot-registory
 npm install
 
 # 1. Create the storage
@@ -120,6 +120,8 @@ Open `https://cot.<your-subdomain>.workers.dev/` for the dashboard.
 npm run db:migrate:local
 npm run dev            # http://localhost:8787
 npm test               # vitest + workerd (Miniflare R2/D1)
+npm run lint           # biome (format + lint); `lint:fix` applies fixes
+npm run check          # typecheck + lint + tests (what CI runs)
 ```
 
 Push to the local instance with `docker push localhost:8787/...` (Docker
@@ -136,6 +138,29 @@ treats `localhost` as an insecure registry by default).
 Registry clients never use the admin secrets — they authenticate with access
 tokens issued at `/admin`. Per-repository visibility (public/private) lives in
 D1 and is managed there too.
+
+## Running in production
+
+A checklist for exposing a registry to the internet:
+
+- **Set the admin secrets.** With `ADMIN_USERNAME`/`ADMIN_PASSWORD` unset the
+  registry runs wide open. Use a long random password — it is accepted via
+  Basic auth on every request.
+- **Rate-limit credential guessing.** The Worker logs every failed login
+  (`auth: ...` lines in Workers Logs) but does not throttle by itself — IPs
+  are intentionally not tracked in the Worker. Add a
+  [WAF rate-limiting rule](https://developers.cloudflare.com/waf/rate-limiting-rules/)
+  (e.g. on responses with status 401) in front of the Worker; this requires
+  running on a custom domain/zone rather than `workers.dev`.
+- **Back up metadata.** Blob/manifest *content* lives in R2, but tags,
+  visibility, and tokens live in D1. D1 keeps 30 days of
+  [Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/)
+  history; `wrangler d1 export cot-registry --remote` takes offline snapshots.
+- **Watch the logs.** `observability.enabled` is on in `wrangler.jsonc`, so
+  invocations, `auth:` warnings, unhandled errors, and the nightly
+  `gc: uploads=… blobs=… manifests=…` summary all land in Workers Logs.
+- **Mind the plan limits.** Request-body size (layer uploads, see below), D1
+  storage, and R2 class-A operations all scale with your Cloudflare plan.
 
 ## Limits & caveats
 

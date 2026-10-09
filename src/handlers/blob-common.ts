@@ -23,14 +23,17 @@ export async function commitBlob(
 ): Promise<void> {
   const now = Date.now();
   await env.DB.batch([
-    env.DB
-      .prepare("INSERT OR IGNORE INTO blobs (digest, size, created_at) VALUES (?, ?, ?)")
-      .bind(digest, size, now),
-    env.DB
-      .prepare("INSERT OR IGNORE INTO repo_blobs (repo, digest, created_at) VALUES (?, ?, ?)")
-      .bind(repo, digest, now),
-    env.DB
-      .prepare("INSERT OR IGNORE INTO repositories (name, created_at) VALUES (?, ?)")
-      .bind(repo, now),
+    env.DB.prepare("INSERT OR IGNORE INTO blobs (digest, size, created_at) VALUES (?, ?, ?)").bind(
+      digest,
+      size,
+      now,
+    ),
+    env.DB.prepare(
+      "INSERT OR IGNORE INTO repo_blobs (repo, digest, created_at) VALUES (?, ?, ?)",
+    ).bind(repo, digest, now),
+    env.DB.prepare("INSERT OR IGNORE INTO repositories (name, created_at) VALUES (?, ?)").bind(
+      repo,
+      now,
+    ),
   ]);
 }

@@ -94,11 +94,7 @@ export function visibilityBadge(visibility: string): string {
  * Home page. `showAll` lists every repository with its visibility
  * (authenticated viewers); otherwise only public repositories appear.
  */
-export async function renderHomePage(
-  env: Env,
-  url: URL,
-  showAll: boolean,
-): Promise<string> {
+export async function renderHomePage(env: Env, url: URL, showAll: boolean): Promise<string> {
   const where = showAll ? "" : "WHERE r.visibility = 'public'";
   const { results } = await env.DB.prepare(
     `SELECT r.name, r.created_at, r.visibility,
@@ -138,8 +134,7 @@ ${command(`docker push ${host}/my-image:latest`)}
     const visHead = showAll ? `<th>Visibility</th>` : "";
     const rows = results
       .map((r) => {
-        const last =
-          Math.max(r.last_tag_at ?? 0, r.last_manifest_at ?? 0) || r.created_at;
+        const last = Math.max(r.last_tag_at ?? 0, r.last_manifest_at ?? 0) || r.created_at;
         const visCell = showAll ? `<td>${visibilityBadge(r.visibility)}</td>` : "";
         return `<tr>
 <td><a href="${escapeHtml(repoUrl(r.name))}">${escapeHtml(r.name)}</a></td>
@@ -188,14 +183,8 @@ interface UntaggedManifestRow {
 }
 
 /** Returns null when the repository does not exist. */
-export async function renderRepoPage(
-  env: Env,
-  url: URL,
-  repo: string,
-): Promise<string | null> {
-  const repoRow = await env.DB.prepare(
-    "SELECT name, created_at FROM repositories WHERE name = ?",
-  )
+export async function renderRepoPage(env: Env, url: URL, repo: string): Promise<string | null> {
+  const repoRow = await env.DB.prepare("SELECT name, created_at FROM repositories WHERE name = ?")
     .bind(repo)
     .first<{ name: string; created_at: number }>();
   if (!repoRow) return null;
@@ -312,8 +301,7 @@ function num(value: unknown): number | null {
 function objectArray(value: unknown): Record<string, unknown>[] {
   if (!Array.isArray(value)) return [];
   return value.filter(
-    (v): v is Record<string, unknown> =>
-      v !== null && typeof v === "object" && !Array.isArray(v),
+    (v): v is Record<string, unknown> => v !== null && typeof v === "object" && !Array.isArray(v),
   );
 }
 
@@ -417,9 +405,7 @@ export async function renderManifestPage(
 
   const [object, tagsRes, referrersRes] = await Promise.all([
     env.BUCKET.get(manifestKey(digest)),
-    env.DB.prepare(
-      "SELECT tag FROM tags WHERE repo = ? AND digest = ? ORDER BY updated_at DESC",
-    )
+    env.DB.prepare("SELECT tag FROM tags WHERE repo = ? AND digest = ? ORDER BY updated_at DESC")
       .bind(repo, digest)
       .all<{ tag: string }>(),
     env.DB.prepare(

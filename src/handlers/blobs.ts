@@ -29,10 +29,7 @@ interface BlobRange {
  * Returns null for a missing or malformed header (=> serve the full blob),
  * "unsatisfiable" when the requested range lies beyond the content.
  */
-function parseRangeHeader(
-  header: string | null,
-  size: number,
-): BlobRange | "unsatisfiable" | null {
+function parseRangeHeader(header: string | null, size: number): BlobRange | "unsatisfiable" | null {
   if (header === null) return null;
   const m = /^bytes=(\d*)-(\d*)$/.exec(header.trim());
   if (!m) return null;
@@ -73,10 +70,9 @@ export async function handleBlobGetOrHead(
     return ociError(404, "BLOB_UNKNOWN", undefined, { digest: digest.digest });
   }
 
-  const row = await env.DB
-    .prepare(
-      "SELECT b.size AS size FROM repo_blobs rb JOIN blobs b ON b.digest = rb.digest WHERE rb.repo = ? AND rb.digest = ?",
-    )
+  const row = await env.DB.prepare(
+    "SELECT b.size AS size FROM repo_blobs rb JOIN blobs b ON b.digest = rb.digest WHERE rb.repo = ? AND rb.digest = ?",
+  )
     .bind(repo, digest.digest)
     .first<{ size: number }>();
   if (!row) {
@@ -93,9 +89,15 @@ export async function handleBlobGetOrHead(
 
   const range = parseRangeHeader(request.headers.get("Range"), row.size);
   if (range === "unsatisfiable") {
-    return ociError(416, "SIZE_INVALID", "requested range not satisfiable", {
-      digest: digest.digest,
-    }, { "Content-Range": `bytes */${row.size}` });
+    return ociError(
+      416,
+      "SIZE_INVALID",
+      "requested range not satisfiable",
+      {
+        digest: digest.digest,
+      },
+      { "Content-Range": `bytes */${row.size}` },
+    );
   }
 
   if (range !== null) {
@@ -129,8 +131,7 @@ export async function handleBlobDelete(
     return ociError(404, "BLOB_UNKNOWN", undefined, { digest: digest.digest });
   }
 
-  const result = await env.DB
-    .prepare("DELETE FROM repo_blobs WHERE repo = ? AND digest = ?")
+  const result = await env.DB.prepare("DELETE FROM repo_blobs WHERE repo = ? AND digest = ?")
     .bind(repo, digest.digest)
     .run();
   if (result.meta.changes === 0) {
@@ -142,10 +143,9 @@ export async function handleBlobDelete(
   // keeps the row. The R2 object itself is never deleted inline (a concurrent
   // push may be mid-commit); the GC pass removes blob objects whose digest has
   // no `blobs` row left.
-  await env.DB
-    .prepare(
-      "DELETE FROM blobs WHERE digest = ? AND NOT EXISTS (SELECT 1 FROM repo_blobs WHERE digest = ?)",
-    )
+  await env.DB.prepare(
+    "DELETE FROM blobs WHERE digest = ? AND NOT EXISTS (SELECT 1 FROM repo_blobs WHERE digest = ?)",
+  )
     .bind(digest.digest, digest.digest)
     .run();
 

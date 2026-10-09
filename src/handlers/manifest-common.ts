@@ -41,7 +41,9 @@ export async function findMissingDigests(
       .join(" UNION ");
     const binds: string[] = [];
     for (const _ of tables) binds.push(repo, ...chunk);
-    const rows = await env.DB.prepare(sql).bind(...binds).all<{ digest: string }>();
+    const rows = await env.DB.prepare(sql)
+      .bind(...binds)
+      .all<{ digest: string }>();
     for (const row of rows.results) found.add(row.digest);
   }
   return unique.filter((digest) => !found.has(digest));

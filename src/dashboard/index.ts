@@ -19,12 +19,7 @@ import type { Principal } from "../auth";
 import { BASIC_CHALLENGE, anonymousCanRead } from "../auth";
 import { isValidRepoName, parseDigest } from "../oci/validation";
 import { pageResponse } from "./html";
-import {
-  errorResponse,
-  renderHomePage,
-  renderManifestPage,
-  renderRepoPage,
-} from "./pages";
+import { errorResponse, renderHomePage, renderManifestPage, renderRepoPage } from "./pages";
 
 /** Simple isometric container/box glyph. */
 const FAVICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path fill="#2f81f7" d="M16 2 29 9.5v13L16 30 3 22.5v-13z"/><path fill="#9ec7ff" d="M16 2 29 9.5 16 17 3 9.5z"/><path fill="#1158c7" d="M16 17v13L3 22.5v-13z"/></svg>`;

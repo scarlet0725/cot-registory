@@ -26,8 +26,7 @@ export function formatBytes(bytes: number): string {
     value /= 1024;
     unit += 1;
   }
-  const rendered =
-    unit === 0 ? String(value) : value >= 100 ? value.toFixed(0) : value.toFixed(1);
+  const rendered = unit === 0 ? String(value) : value >= 100 ? value.toFixed(0) : value.toFixed(1);
   return `${rendered} ${BYTE_UNITS[unit]!}`;
 }
 
@@ -46,7 +45,7 @@ export function shortDigest(digest: string): string {
 
 /** Dashboard URL of a repository page (name may contain "/"). */
 export function repoUrl(repo: string): string {
-  return "/r/" + repo.split("/").map(encodeURIComponent).join("/");
+  return `/r/${repo.split("/").map(encodeURIComponent).join("/")}`;
 }
 
 /** Dashboard URL of a manifest page. */

@@ -16,14 +16,7 @@ import type { Env } from "../types";
 import type { Principal } from "../auth";
 import { BASIC_CHALLENGE, sha256Hex } from "../auth";
 import { isValidRepoName } from "../oci/validation";
-import {
-  copyButton,
-  escapeHtml,
-  formatTime,
-  pageResponse,
-  renderLayout,
-  repoUrl,
-} from "./html";
+import { copyButton, escapeHtml, formatTime, pageResponse, renderLayout, repoUrl } from "./html";
 import { errorResponse, visibilityBadge } from "./pages";
 
 const MAX_LABEL_LENGTH = 100;
@@ -58,12 +51,13 @@ function seeOther(location: string): Response {
 
 /**
  * True when the request looks like a cross-origin form submission. `Origin`
- * must match when present; `Sec-Fetch-Site` must be same-origin (or absent —
+ * must match when present — the literal "null" (sandboxed iframes, data: URLs)
+ * counts as cross-origin; `Sec-Fetch-Site` must be same-origin (or absent —
  * non-browser clients like curl send neither header and pass).
  */
 function isCrossOrigin(request: Request, url: URL): boolean {
   const origin = request.headers.get("Origin");
-  if (origin !== null && origin !== "null" && origin !== url.origin) return true;
+  if (origin !== null && origin !== url.origin) return true;
   const site = request.headers.get("Sec-Fetch-Site");
   if (site !== null && site !== "same-origin" && site !== "none") return true;
   return false;
@@ -90,14 +84,12 @@ async function formFields(request: Request): Promise<Map<string, string> | null>
 
 async function renderAdminHome(env: Env, principal: Principal): Promise<string> {
   const [tokensRes, reposRes] = await Promise.all([
-    env.DB
-      .prepare(
-        "SELECT id, label, created_at, last_used_at FROM credentials ORDER BY created_at DESC LIMIT ?",
-      )
+    env.DB.prepare(
+      "SELECT id, label, created_at, last_used_at FROM credentials ORDER BY created_at DESC LIMIT ?",
+    )
       .bind(TOKEN_LIST_LIMIT)
       .all<CredentialListRow>(),
-    env.DB
-      .prepare("SELECT name, visibility FROM repositories ORDER BY name LIMIT ?")
+    env.DB.prepare("SELECT name, visibility FROM repositories ORDER BY name LIMIT ?")
       .bind(REPO_LIST_LIMIT)
       .all<RepoVisibilityRow>(),
   ]);
@@ -184,13 +176,7 @@ ${reposTable}`;
   });
 }
 
-function renderTokenCreated(
-  env: Env,
-  url: URL,
-  id: string,
-  label: string,
-  secret: string,
-): string {
+function renderTokenCreated(env: Env, url: URL, id: string, label: string, secret: string): string {
   const content = `<h1>Token created</h1>
 <p class="subtitle">${escapeHtml(label)}</p>
 <div class="card">
@@ -224,10 +210,9 @@ async function createToken(env: Env, url: URL, request: Request): Promise<Respon
 
   const id = randomHex(8);
   const secret = randomHex(32);
-  await env.DB
-    .prepare(
-      "INSERT INTO credentials (id, label, secret_hash, created_at) VALUES (?, ?, ?, ?)",
-    )
+  await env.DB.prepare(
+    "INSERT INTO credentials (id, label, secret_hash, created_at) VALUES (?, ?, ?, ?)",
+  )
     .bind(id, label, await sha256Hex(secret), Date.now())
     .run();
 
@@ -257,8 +242,7 @@ async function setVisibility(env: Env, request: Request): Promise<Response> {
       "A repository name and a visibility of public or private are required.",
     );
   }
-  await env.DB
-    .prepare("UPDATE repositories SET visibility = ? WHERE name = ?")
+  await env.DB.prepare("UPDATE repositories SET visibility = ? WHERE name = ?")
     .bind(visibility, repo)
     .run();
   return seeOther("/admin");

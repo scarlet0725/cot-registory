@@ -35,9 +35,7 @@ async function issueToken(): Promise<{ id: string; secret: string }> {
 
 async function createRepo(visibility: "public" | "private"): Promise<string> {
   const name = `authz/${visibility}-${Date.now().toString(36)}${seq++}`;
-  await env.DB.prepare(
-    "INSERT INTO repositories (name, created_at, visibility) VALUES (?, ?, ?)",
-  )
+  await env.DB.prepare("INSERT INTO repositories (name, created_at, visibility) VALUES (?, ?, ?)")
     .bind(name, Date.now(), visibility)
     .run();
   return name;

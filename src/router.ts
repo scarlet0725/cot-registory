@@ -102,6 +102,14 @@ app.use("*", async (c, next) => {
   // Manifest media types (and anything else echoed as Content-Type) must never
   // be sniffed into something renderable on the registry origin.
   c.res.headers.set("X-Content-Type-Options", "nosniff");
+  // Workers only serve HTTPS, so pinning costs nothing and protects pulls
+  // through downgrade-prone networks.
+  c.res.headers.set("Strict-Transport-Security", "max-age=31536000");
+  // Some clients sniff this header (on /v2/ and on errors) to confirm they are
+  // talking to a v2 registry; the reference implementation sets it everywhere.
+  if (c.req.path === "/v2" || c.req.path.startsWith("/v2/")) {
+    c.res.headers.set("Docker-Distribution-API-Version", "registry/2.0");
+  }
 });
 
 app.get("/healthz", (c) => c.text("ok"));
@@ -244,11 +252,12 @@ app.all("/admin/*", adminRoute);
 // ---------------------------------------------------------------------------
 // Dashboard fallback for every non-/v2 path.
 // ---------------------------------------------------------------------------
-app.all("*", (c) =>
-  handleDashboard(c.req.raw, c.env, new URL(c.req.url), c.get("principal")),
-);
+app.all("*", (c) => handleDashboard(c.req.raw, c.env, new URL(c.req.url), c.get("principal")));
 
-app.onError((err) => {
-  console.error("unhandled error:", err instanceof Error ? (err.stack ?? err.message) : err);
+app.onError((err, c) => {
+  console.error(
+    `unhandled error on ${c.req.method} ${c.req.path}:`,
+    err instanceof Error ? (err.stack ?? err.message) : err,
+  );
   return ociError(500, "UNSUPPORTED", "internal server error");
 });

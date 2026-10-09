@@ -17,6 +17,12 @@ export default {
   fetch: (request, env, ctx) => app.fetch(request, env, ctx),
 
   async scheduled(_controller, env, ctx) {
-    ctx.waitUntil(runGC(env));
+    ctx.waitUntil(
+      runGC(env).catch((err) => {
+        // One clear log line, then rethrow so the cron run is marked failed.
+        console.error("gc failed:", err instanceof Error ? (err.stack ?? err.message) : err);
+        throw err;
+      }),
+    );
   },
 } satisfies ExportedHandler<Env>;

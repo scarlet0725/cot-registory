@@ -240,8 +240,7 @@ export async function handleManifestDelete(
   repo: string,
   reference: string,
 ): Promise<Response> {
-  const accepted = () =>
-    new Response(null, { status: 202, headers: { "Content-Length": "0" } });
+  const accepted = () => new Response(null, { status: 202, headers: { "Content-Length": "0" } });
 
   if (!looksLikeDigest(reference)) {
     const row = await env.DB.prepare("SELECT tag FROM tags WHERE repo = ? AND tag = ?")

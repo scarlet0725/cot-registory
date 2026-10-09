@@ -40,8 +40,7 @@ function uploadLocation(repo: string, id: string): string {
 }
 
 async function loadSession(env: Env, repo: string, id: string): Promise<UploadRow | null> {
-  return env.DB
-    .prepare("SELECT * FROM uploads WHERE id = ? AND repo = ?")
+  return env.DB.prepare("SELECT * FROM uploads WHERE id = ? AND repo = ?")
     .bind(id, repo)
     .first<UploadRow>();
 }
@@ -334,8 +333,7 @@ export async function handleUploadStart(
     // Blobs are content-addressed and global, so `from=` is not needed.
     const digest = parseDigest(mountParam);
     if (digest?.supported) {
-      const row = await env.DB
-        .prepare("SELECT size FROM blobs WHERE digest = ?")
+      const row = await env.DB.prepare("SELECT size FROM blobs WHERE digest = ?")
         .bind(digest.digest)
         .first<{ size: number }>();
       if (row) {
@@ -349,14 +347,13 @@ export async function handleUploadStart(
   const id = crypto.randomUUID();
   const now = Date.now();
   await env.DB.batch([
-    env.DB
-      .prepare(
-        "INSERT INTO uploads (id, repo, r2_key, bytes_received, parts, created_at, updated_at) VALUES (?, ?, ?, 0, '[]', ?, ?)",
-      )
-      .bind(id, repo, stagingKey(id), now, now),
-    env.DB
-      .prepare("INSERT OR IGNORE INTO repositories (name, created_at) VALUES (?, ?)")
-      .bind(repo, now),
+    env.DB.prepare(
+      "INSERT INTO uploads (id, repo, r2_key, bytes_received, parts, created_at, updated_at) VALUES (?, ?, ?, 0, '[]', ?, ?)",
+    ).bind(id, repo, stagingKey(id), now, now),
+    env.DB.prepare("INSERT OR IGNORE INTO repositories (name, created_at) VALUES (?, ?)").bind(
+      repo,
+      now,
+    ),
   ]);
   return accepted(repo, id, 0);
 }
@@ -451,8 +448,7 @@ export async function handleUploadChunk(
       // Nothing arrived; keep the session untouched (but record the upload id
       // if we just created the multipart upload).
       if (firstChunk) {
-        await env.DB
-          .prepare("UPDATE uploads SET r2_upload_id = ?, updated_at = ? WHERE id = ?")
+        await env.DB.prepare("UPDATE uploads SET r2_upload_id = ?, updated_at = ? WHERE id = ?")
           .bind(mpu.uploadId, Date.now(), session.id)
           .run();
       }
@@ -460,10 +456,9 @@ export async function handleUploadChunk(
     }
     parts.push(...streamed.parts);
     const bytesReceived = session.bytes_received + streamed.total;
-    await env.DB
-      .prepare(
-        "UPDATE uploads SET r2_upload_id = ?, bytes_received = ?, part_size = ?, last_part_size = ?, parts = ?, updated_at = ? WHERE id = ?",
-      )
+    await env.DB.prepare(
+      "UPDATE uploads SET r2_upload_id = ?, bytes_received = ?, part_size = ?, last_part_size = ?, parts = ?, updated_at = ? WHERE id = ?",
+    )
       .bind(
         mpu.uploadId,
         bytesReceived,
@@ -492,10 +487,9 @@ export async function handleUploadChunk(
   parts.push({ partNumber: part.partNumber, etag: part.etag });
 
   const bytesReceived = session.bytes_received + len;
-  await env.DB
-    .prepare(
-      "UPDATE uploads SET r2_upload_id = ?, bytes_received = ?, part_size = ?, last_part_size = ?, parts = ?, updated_at = ? WHERE id = ?",
-    )
+  await env.DB.prepare(
+    "UPDATE uploads SET r2_upload_id = ?, bytes_received = ?, part_size = ?, last_part_size = ?, parts = ?, updated_at = ? WHERE id = ?",
+  )
     .bind(
       mpu.uploadId,
       bytesReceived,

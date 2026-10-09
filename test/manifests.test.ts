@@ -1,14 +1,6 @@
 import { SELF } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
-import {
-  BASE,
-  bytesOf,
-  digestOf,
-  errorCodeOf,
-  putManifest,
-  pushBlob,
-  seedImage,
-} from "./helpers";
+import { BASE, bytesOf, digestOf, errorCodeOf, putManifest, pushBlob, seedImage } from "./helpers";
 
 const OCI_MANIFEST = "application/vnd.oci.image.manifest.v1+json";
 const OCI_INDEX = "application/vnd.oci.image.index.v1+json";
@@ -232,9 +224,9 @@ describe("manifest delete", () => {
     });
     expect(del.status).toBe(202);
     expect((await SELF.fetch(`${BASE}/v2/${repo}/manifests/v1`)).status).toBe(404);
-    expect(
-      (await SELF.fetch(`${BASE}/v2/${repo}/manifests/${img.manifestDigest}`)).status,
-    ).toBe(404);
+    expect((await SELF.fetch(`${BASE}/v2/${repo}/manifests/${img.manifestDigest}`)).status).toBe(
+      404,
+    );
   });
 
   it("deleting an unknown tag => 404", async () => {
@@ -336,13 +328,13 @@ describe("referrers API", () => {
     const filtered = await SELF.fetch(
       `${BASE}/v2/${repo}/referrers/${img.manifestDigest}?artifactType=${encodeURIComponent("application/spdx+json")}`,
     );
-    expect((await filtered.json() as { manifests: unknown[] }).manifests).toHaveLength(1);
+    expect(((await filtered.json()) as { manifests: unknown[] }).manifests).toHaveLength(1);
     expect(filtered.headers.get("OCI-Filters-Applied")).toBe("artifactType");
 
     const none = await SELF.fetch(
       `${BASE}/v2/${repo}/referrers/${img.manifestDigest}?artifactType=${encodeURIComponent("application/other")}`,
     );
-    expect((await none.json() as { manifests: unknown[] }).manifests).toHaveLength(0);
+    expect(((await none.json()) as { manifests: unknown[] }).manifests).toHaveLength(0);
   });
 
   it("no referrers => empty index, still 200", async () => {

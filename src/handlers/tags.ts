@@ -66,10 +66,13 @@ export async function handleTagsList(env: Env, repo: string, url: URL): Promise<
   if (page.limit > 0) {
     const stmt =
       page.last !== null
-        ? env.DB.prepare("SELECT tag FROM tags WHERE repo = ? AND tag > ? ORDER BY tag LIMIT ?")
-            .bind(repo, page.last, page.limit + 1)
-        : env.DB.prepare("SELECT tag FROM tags WHERE repo = ? ORDER BY tag LIMIT ?")
-            .bind(repo, page.limit + 1);
+        ? env.DB.prepare(
+            "SELECT tag FROM tags WHERE repo = ? AND tag > ? ORDER BY tag LIMIT ?",
+          ).bind(repo, page.last, page.limit + 1)
+        : env.DB.prepare("SELECT tag FROM tags WHERE repo = ? ORDER BY tag LIMIT ?").bind(
+            repo,
+            page.limit + 1,
+          );
     ({ values: tags, truncated } = await fetchPage(stmt, page.limit, "tag"));
   }
 
@@ -84,11 +87,7 @@ export async function handleTagsList(env: Env, repo: string, url: URL): Promise<
   return new Response(JSON.stringify({ name: repo, tags }), { status: 200, headers });
 }
 
-export async function handleCatalog(
-  env: Env,
-  url: URL,
-  principal: Principal,
-): Promise<Response> {
+export async function handleCatalog(env: Env, url: URL, principal: Principal): Promise<Response> {
   const page = parsePagination(url);
   if (page instanceof Response) return page;
 
@@ -103,9 +102,9 @@ export async function handleCatalog(
       binds.push(page.last);
     }
     const clause = where.length > 0 ? ` WHERE ${where.join(" AND ")}` : "";
-    const stmt = env.DB
-      .prepare(`SELECT name FROM repositories${clause} ORDER BY name LIMIT ?`)
-      .bind(...binds, page.limit + 1);
+    const stmt = env.DB.prepare(
+      `SELECT name FROM repositories${clause} ORDER BY name LIMIT ?`,
+    ).bind(...binds, page.limit + 1);
     ({ values: repositories, truncated } = await fetchPage(stmt, page.limit, "name"));
   }
 

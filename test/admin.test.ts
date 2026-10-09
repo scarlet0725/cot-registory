@@ -78,11 +78,14 @@ describe("admin area", () => {
     const anonymous = await fetchAuthed("/v2/");
     expect(anonymous.status).toBe(401);
     expect(anonymous.headers.get("WWW-Authenticate")).toContain("Basic");
+    // Clients sniff this header to confirm a v2 registry, including on the 401.
+    expect(anonymous.headers.get("Docker-Distribution-API-Version")).toBe("registry/2.0");
 
     const authed = await fetchAuthed("/v2/", {
       headers: { Authorization: basic(id, secret) },
     });
     expect(authed.status).toBe(200);
+    expect(authed.headers.get("Docker-Distribution-API-Version")).toBe("registry/2.0");
   });
 
   it("pushes require a token", async () => {
@@ -116,6 +119,17 @@ describe("admin area", () => {
       { Origin: "https://evil.example" },
     );
     expect(res.status).toBe(403);
+
+    // An opaque origin (sandboxed iframe, data: URL) is cross-origin too.
+    const nullOrigin = await adminForm("/admin/tokens", { label: "csrf" }, { Origin: "null" });
+    expect(nullOrigin.status).toBe(403);
+
+    const crossSite = await adminForm(
+      "/admin/tokens",
+      { label: "csrf" },
+      { "Sec-Fetch-Site": "cross-site" },
+    );
+    expect(crossSite.status).toBe(403);
   });
 });
 
