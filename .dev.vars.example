@@ -1,0 +1,11 @@
+# Admin credentials for the /admin dashboard (token issuance, repository visibility).
+# The admin user also has full superuser access to the registry API.
+#
+# In production these are Worker secrets:
+#   wrangler secret put ADMIN_USERNAME
+#   wrangler secret put ADMIN_PASSWORD
+#
+# If BOTH are unset the registry runs in OPEN mode (no authentication at all) —
+# acceptable for local development only. Setting only one of them fails closed.
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=change-me

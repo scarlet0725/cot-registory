@@ -145,4 +145,5 @@ vite.config.ts.timestamp-*
 # Cloudflare Workers
 .wrangler/
 .dev.vars*
+!.dev.vars.example
 worker-configuration.d.ts

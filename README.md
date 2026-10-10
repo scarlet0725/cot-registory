@@ -1,5 +1,7 @@
 # cot
 
+English | [日本語](./README.ja.md)
+
 **cot** is an OCI-conformant container registry that runs entirely on
 [Cloudflare Workers](https://developers.cloudflare.com/workers/), storing
 content in [R2](https://developers.cloudflare.com/r2/) and metadata in
@@ -8,6 +10,8 @@ dashboard in the spirit of [zot](https://zotregistry.dev/).
 
 No servers, no containers to host your containers: push with `docker push`,
 pull from anywhere, browse in the dashboard.
+
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/scarlet0725/cot-registory)
 
 ## Features
 
@@ -58,8 +62,12 @@ stream straight to `blobs/<digest>` with the same verification — no staging.
 
 ## Quick start
 
-Prerequisites: a Cloudflare account with Workers, R2, and D1 enabled, and
-`npm`/`node` locally.
+The fastest path is the **Deploy to Cloudflare** button above: it clones the
+repository into your account, provisions the R2 bucket and D1 database,
+prompts for the admin secrets, and applies migrations on deploy.
+
+To deploy manually instead — prerequisites: a Cloudflare account with
+Workers, R2, and D1 enabled, and `npm`/`node` locally.
 
 ```sh
 git clone https://github.com/scarlet0725/cot-registory && cd cot-registory
